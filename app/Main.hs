@@ -35,8 +35,7 @@ type Model = ()
 -- | `component` takes as arguments the initial model, update function, view function
 app :: App Model Action
 app = component () update_ $ \() ->
-  div_
-  []
+  vfrag
   [ h2_ [ CSS.style_ [ CSS.fontFamily "monospace" ] ] [ "🍜 📷 miso-camera" ]
   , button_
     [ id_ "button"
