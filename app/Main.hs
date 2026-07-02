@@ -69,7 +69,7 @@ app = component () update_ $ \() ->
     ]
   ]
    where
-     update_ :: Action -> Effect parent Model Action
+     update_ :: Action -> Effect parent props Model Action
      update_ = \case
        OpenCamera ->
          getUserMedia userMedia OpenedStream ErrorCamera
