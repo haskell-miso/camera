@@ -1,12 +1,186 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title> miso-camera </title>
+    <title>miso-camera — getUserMedia from Haskell</title>
+    <meta name="description" content="The getUserMedia camera API driven from Haskell compiled to WebAssembly: live preview, CSS filters, mirroring and PNG snapshots, built with the miso framework — everything stays in your browser.">
+    <link rel="canonical" href="https://camera.haskell-miso.org/">
+    <meta name="theme-color" content="#0e1014">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://camera.haskell-miso.org/">
+    <meta property="og:title" content="miso-camera — getUserMedia from Haskell">
+    <meta property="og:description" content="Live camera preview, filters and PNG snapshots written in Haskell, compiled to WebAssembly with miso.">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="miso-camera — getUserMedia from Haskell">
+    <meta name="twitter:description" content="Live camera preview, filters and PNG snapshots written in Haskell, compiled to WebAssembly with miso.">
+    <link rel="icon" href="favicon.ico">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "miso-camera",
+      "url": "https://camera.haskell-miso.org/",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "description": "The getUserMedia camera API driven from Haskell compiled to WebAssembly with the miso framework.",
+      "codeRepository": "https://github.com/haskell-miso/miso-camera"
+    }
+    </script>
+    <style>
+      :root {
+        --bg: #0e1014;
+        --panel: #171b22;
+        --panel-edge: #2a313d;
+        --text: #eaedf2;
+        --muted: #97a1b0;
+        --accent: #ff6b81;
+        --accent-2: #6cb6ff;
+        color-scheme: dark;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      .app { max-width: 820px; margin: 0 auto; padding: 1.25rem; }
+      .hero { text-align: center; padding: 2.25rem 0 1.5rem; }
+      .hero h1 { margin: 0 0 .5rem; font-size: clamp(1.9rem, 5vw, 2.8rem); letter-spacing: -.02em; }
+      .hero h1 a { color: var(--text); text-decoration: none; }
+      .hero h1 a:hover { color: var(--accent); }
+      .tagline { margin: 0 auto 1.1rem; max-width: 44rem; color: var(--muted); font-size: 1.05rem; }
+      .gh {
+        display: inline-block;
+        padding: .5rem 1.1rem;
+        border: 1px solid var(--panel-edge);
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--text);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: .92rem;
+        transition: border-color .15s ease, transform .15s ease;
+      }
+      .gh:hover { border-color: var(--accent); transform: translateY(-1px); }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-edge);
+        border-radius: 16px;
+        padding: 1.25rem;
+      }
+      .viewport {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #000;
+        border: 1px solid var(--panel-edge);
+        aspect-ratio: 4 / 3;
+      }
+      .video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .video.flip { transform: scaleX(-1); }
+      .overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(10, 12, 16, .55);
+      }
+      .hidden { display: none; }
+      .filters { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1rem; }
+      .chip {
+        padding: .35rem .9rem;
+        border-radius: 999px;
+        border: 1px solid var(--panel-edge);
+        background: var(--bg);
+        color: var(--muted);
+        font-size: .88rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .chip:hover { border-color: var(--accent); color: var(--text); }
+      .chip.active { background: var(--accent); border-color: var(--accent); color: #1c0d10; }
+      .controls { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+      .btn {
+        padding: .55rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid var(--panel-edge);
+        background: var(--bg);
+        color: var(--text);
+        font-size: .95rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn:hover { border-color: var(--accent); }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: #1c0d10; }
+      .btn.primary:hover { filter: brightness(1.08); }
+      .btn.big { font-size: 1.15rem; padding: .8rem 1.6rem; }
+      .error {
+        margin-top: 1rem;
+        background: rgba(248, 81, 73, .12);
+        border: 1px solid rgba(248, 81, 73, .4);
+        color: #f85149;
+        border-radius: 10px;
+        padding: .6rem .9rem;
+        font-size: .95rem;
+      }
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.5rem;
+      }
+      .toolbar h2 { margin: 0; font-size: 1.1rem; }
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: .6rem;
+        margin-top: .75rem;
+      }
+      .shot img {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--panel-edge);
+        display: block;
+        transition: transform .15s ease;
+      }
+      .shot:hover img { transform: scale(1.03); }
+      .foot { text-align: center; color: var(--muted); font-size: .9rem; padding: 2rem 0 1rem; }
+      .foot a { color: var(--accent); text-decoration: none; }
+      .foot a:hover { text-decoration: underline; }
+      body:has(> .app) .boot, body:has(> .stage) .boot { display: none; }
+      .boot {
+        min-height: 100vh;
+        display: flex; flex-direction: column; gap: 1rem;
+        align-items: center; justify-content: center;
+        color: var(--muted);
+      }
+      .boot .spin {
+        width: 42px; height: 42px;
+        border-radius: 50%;
+        border: 3px solid var(--panel-edge);
+        border-top-color: var(--accent);
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @media (max-width: 560px) { .app { padding: .9rem; } }
+    </style>
   </head>
   <body>
+    <div class="boot">
+      <div class="spin" aria-hidden="true"></div>
+      <p>Loading Haskell WebAssembly&hellip;</p>
+      <noscript>miso-camera is an interactive WebAssembly demo and needs JavaScript enabled.</noscript>
+    </div>
     <script src="index.js" type="module"></script>
   </body>
 </html>
-
