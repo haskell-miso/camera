@@ -141,8 +141,8 @@ takeSnapshot css flip_ = do
   _ <- ctx # "drawImage" $ (videoRef, 0 :: Double, 0 :: Double)
   fromJSValUnchecked =<< (cnv # "toDataURL" $ [ "image/png" :: MisoString ])
 ----------------------------------------------------------------------------
-viewModel :: () -> () -> Model -> View () Model Action
-viewModel _ _ m =
+viewModel :: Model -> View () () Model Action
+viewModel m =
   H.div_
   [ P.class_ "app" ]
   [ H.header_
